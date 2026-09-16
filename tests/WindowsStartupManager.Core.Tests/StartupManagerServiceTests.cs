@@ -50,6 +50,25 @@ public class StartupManagerServiceTests
     }
 
     [Fact]
+    public async Task DisableAsync_WhenPersistFailsBecauseCallerTokenWasCancelled_RestoresWithNonCancelledTokenAndRethrowsCancellation()
+    {
+        var key = new StartupEntryKey(StartupEntrySource.CurrentUserRegistryRun, "MyApp");
+        var adapter = new FakeAdapter(StartupEntrySource.CurrentUserRegistryRun);
+        using var cts = new CancellationTokenSource();
+        var store = new FakeDisabledEntryStore { ThrowOnAdd = new OperationCanceledException(cts.Token) };
+        var service = new StartupManagerService(new[] { adapter }, store);
+
+        cts.Cancel();
+
+        var ex = await Assert.ThrowsAsync<OperationCanceledException>(() => service.DisableAsync(MakeEntry(key), cts.Token));
+
+        Assert.Equal(cts.Token, ex.CancellationToken);
+        Assert.Equal(1, adapter.RestoreCalls);
+        Assert.False(adapter.LastRestoreToken.IsCancellationRequested);
+        Assert.Empty(store.Records);
+    }
+
+    [Fact]
     public async Task DisableAsync_WhenPersistAndRollbackFail_ThrowsWithBothErrors()
     {
         var key = new StartupEntryKey(StartupEntrySource.CurrentUserRegistryRun, "MyApp");
@@ -76,6 +95,7 @@ public class StartupManagerServiceTests
         public bool RequiresElevation => false;
         public int CaptureAndRemoveCalls { get; private set; }
         public int RestoreCalls { get; private set; }
+        public CancellationToken LastRestoreToken { get; private set; }
         public Exception? ThrowOnRestore { get; set; }
 
         public Task<IReadOnlyList<StartupEntry>> GetEntriesAsync(CancellationToken cancellationToken = default) =>
@@ -100,6 +120,7 @@ public class StartupManagerServiceTests
         public Task RestoreAsync(StartupEntryRawData data, CancellationToken cancellationToken = default)
         {
             RestoreCalls++;
+            LastRestoreToken = cancellationToken;
             if (ThrowOnRestore is not null)
             {
                 throw ThrowOnRestore;

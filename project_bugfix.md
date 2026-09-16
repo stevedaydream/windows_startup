@@ -4,8 +4,10 @@ Record platform-specific or repeatedly encountered issues here after they are re
 
 ## `MainViewModel` compile error: `ICollectionView` not found
 
-`ICollectionView` and `CollectionViewSource` live in `System.Windows.Data`, which isn't
-covered by WPF's default global usings. Fixed by adding `using System.Windows.Data;` to
+`ICollectionView` lives in `System.ComponentModel`, while `CollectionViewSource` and
+`PropertyGroupDescription` live in `System.Windows.Data`; neither is covered by WPF's
+default global usings. Fixed by adding `using System.ComponentModel;` and
+`using System.Windows.Data;` to
 `src/WindowsStartupManager.App/ViewModels/MainViewModel.cs`.
 
 ## `StartupManagerService.DisableAsync` could lose an entry on persistence failure
@@ -23,3 +25,11 @@ errors are reported together via `DisableRollbackFailedException` instead of sil
 swallowing either one. Introduced `Services.IDisabledEntryStore` as a persistence seam so
 `StartupManagerServiceTests` can exercise the success and rollback paths with a fake
 store, without touching the JSON file on disk.
+
+The rollback restore is called with `CancellationToken.None`, not the caller's token.
+The original bug: if the store write failed because the caller's token had just been
+cancelled (`OperationCanceledException`), passing that same cancelled token to
+`adapter.RestoreAsync` could make the compensating restore abort immediately too,
+leaving the live entry removed with no disabled-record fallback — exactly the data loss
+the rollback exists to prevent. `DisableAsync` still rethrows the original
+`OperationCanceledException` once the restore (run with a live token) succeeds.

@@ -102,7 +102,10 @@ public sealed class StartupManagerService
         {
             try
             {
-                await adapter.RestoreAsync(raw, cancellationToken).ConfigureAwait(false);
+                // Rollback must not inherit the caller's token: if persistence failed because
+                // that token was cancelled, restoring with it would abort the compensating
+                // write and leave the entry removed with no record of it anywhere.
+                await adapter.RestoreAsync(raw, CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception rollbackException)
             {

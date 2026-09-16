@@ -1,0 +1,8 @@
+# .NET build output
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio user state
+.vs/
+*.user
+*.suo

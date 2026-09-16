@@ -13,10 +13,15 @@ Native Windows desktop app for viewing and managing startup entries.
 
 ## Architecture
 
-- .NET 8 WPF, using MVVM.
-- A source adapter owns enumeration and mutations for each Windows startup source.
-- A shared domain model feeds the UI; command handling stays in application services.
-- Disabled entries are kept in an app-managed reversible store rather than deleted.
+- .NET 8 WPF (`net8.0-windows`), nullable reference types enabled, MVVM.
+- Solution `WindowsStartupManager.sln` with three projects:
+  - `src/WindowsStartupManager.Core` — class library with domain models (`StartupEntry`, `StartupEntryKey`, `StartupEntryRawData`), command-line parsing (`CommandLineParser`), the `IStartupEntrySourceAdapter` abstraction and its `RegistryRunAdapter` / `StartupFolderAdapter` implementations, the `DisabledEntryStore`, and the `StartupManagerService` that orchestrates adapters + the disabled store.
+  - `src/WindowsStartupManager.App` — WPF UI (views, view models, `RelayCommand`/`AsyncRelayCommand`), the composition root in `App.xaml.cs`.
+  - `tests/WindowsStartupManager.Core.Tests` — xUnit tests for `CommandLineParser` and `DisabledEntryStore`.
+- `RegistryRunAdapter` covers HKCU/HKLM `...\CurrentVersion\Run`; `StartupFolderAdapter` covers the current-user/common Startup folders, reading and writing `.lnk` shortcuts via late-bound `WScript.Shell` COM automation (no extra NuGet dependency).
+- Disabling an entry captures its raw command (and, for shortcuts, moves the `.lnk` file into an app-managed backup directory) into `DisabledEntryStore` (JSON under `%LocalAppData%\WindowsStartupManager`); enabling restores it and removes the record. Disabled entries are grouped and shown with the enabled ones by `StartupManagerService.GetAllEntriesAsync`.
+- Machine-wide mutations (`LocalMachineRegistryRun`, `CommonStartupFolder`) check `ElevationHelper.IsElevated()` before mutating and throw `ElevationRequiredException` when not elevated; the view model surfaces this as an actionable error message instead of failing silently.
+- The UI stays responsive via `AsyncRelayCommand` (async command execution with re-entrancy guarded by an `IsExecuting` flag) and a busy/status/error message surface on `MainViewModel`.
 
 ## Out of scope for first release
 

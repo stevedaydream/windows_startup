@@ -13,9 +13,9 @@ namespace WindowsStartupManager.Core.Services;
 public sealed class StartupManagerService
 {
     private readonly IReadOnlyDictionary<StartupEntrySource, IStartupEntrySourceAdapter> _adapters;
-    private readonly DisabledEntryStore _disabledStore;
+    private readonly IDisabledEntryStore _disabledStore;
 
-    public StartupManagerService(IEnumerable<IStartupEntrySourceAdapter> adapters, DisabledEntryStore disabledStore)
+    public StartupManagerService(IEnumerable<IStartupEntrySourceAdapter> adapters, IDisabledEntryStore disabledStore)
     {
         _adapters = adapters.ToDictionary(a => a.Source);
         _disabledStore = disabledStore;
@@ -85,16 +85,32 @@ public sealed class StartupManagerService
         var adapter = GetAdapter(entry.Source);
         var raw = await adapter.CaptureAndRemoveAsync(entry.Key, cancellationToken).ConfigureAwait(false);
 
-        await _disabledStore.AddAsync(new DisabledEntryRecord
+        try
         {
-            Source = entry.Source.ToString(),
-            Identifier = entry.Key.Identifier,
-            Name = raw.Name,
-            RawCommand = raw.RawCommand,
-            OriginalFilePath = raw.OriginalFilePath,
-            BackupFilePath = raw.BackupFilePath,
-            DisabledAtUtc = DateTimeOffset.UtcNow
-        }, cancellationToken).ConfigureAwait(false);
+            await _disabledStore.AddAsync(new DisabledEntryRecord
+            {
+                Source = entry.Source.ToString(),
+                Identifier = entry.Key.Identifier,
+                Name = raw.Name,
+                RawCommand = raw.RawCommand,
+                OriginalFilePath = raw.OriginalFilePath,
+                BackupFilePath = raw.BackupFilePath,
+                DisabledAtUtc = DateTimeOffset.UtcNow
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception persistException)
+        {
+            try
+            {
+                await adapter.RestoreAsync(raw, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception rollbackException)
+            {
+                throw new DisableRollbackFailedException(persistException, rollbackException);
+            }
+
+            throw;
+        }
     }
 
     public async Task EnableAsync(StartupEntry entry, CancellationToken cancellationToken = default)

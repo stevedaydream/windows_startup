@@ -19,7 +19,7 @@ public sealed class DisabledEntryRecord
 /// relying on any undocumented Windows state. Not thread-safe across processes, but
 /// safe for concurrent calls within this app via an internal lock.
 /// </summary>
-public sealed class DisabledEntryStore
+public sealed class DisabledEntryStore : IDisabledEntryStore
 {
     private readonly string _filePath;
     private readonly SemaphoreSlim _lock = new(1, 1);

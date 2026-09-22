@@ -46,16 +46,20 @@ public sealed class StartupFolderAdapter : IStartupEntrySourceAdapter
             return Task.FromResult<IReadOnlyList<StartupEntry>>(results);
         }
 
-        foreach (var file in Directory.EnumerateFiles(_startupFolderPath, "*.lnk"))
+        foreach (var file in Directory.EnumerateFiles(_startupFolderPath))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var name = Path.GetFileNameWithoutExtension(file);
+            if (string.Equals(Path.GetFileName(file), "desktop.ini", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var name = GetDisplayName(file);
             var key = new StartupEntryKey(Source, Path.GetFileName(file));
 
             try
             {
-                var (targetPath, arguments) = ShellLinkService.ReadShortcut(file);
-                var rawCommand = BuildRawCommand(targetPath, arguments);
+                var rawCommand = ReadRawCommand(file);
                 results.Add(StartupEntryFactory.Create(key, name, Source, StartupEntryStatus.Enabled, rawCommand));
             }
             catch (Exception ex)
@@ -108,8 +112,7 @@ public sealed class StartupFolderAdapter : IStartupEntrySourceAdapter
         string rawCommand;
         try
         {
-            var (targetPath, arguments) = ShellLinkService.ReadShortcut(originalPath);
-            rawCommand = BuildRawCommand(targetPath, arguments);
+            rawCommand = ReadRawCommand(originalPath);
         }
         catch
         {
@@ -122,7 +125,7 @@ public sealed class StartupFolderAdapter : IStartupEntrySourceAdapter
 
         return Task.FromResult(new StartupEntryRawData
         {
-            Name = Path.GetFileNameWithoutExtension(key.Identifier),
+            Name = GetDisplayName(key.Identifier),
             RawCommand = rawCommand,
             OriginalFilePath = originalPath,
             BackupFilePath = backupPath
@@ -157,6 +160,27 @@ public sealed class StartupFolderAdapter : IStartupEntrySourceAdapter
         var path = Path.Combine(_startupFolderPath, key.Identifier);
         var argument = File.Exists(path) ? $"/select,\"{path}\"" : $"\"{_startupFolderPath}\"";
         Process.Start(new ProcessStartInfo("explorer.exe", argument) { UseShellExecute = true });
+    }
+
+    private static bool IsShortcut(string path) =>
+        string.Equals(Path.GetExtension(path), ".lnk", StringComparison.OrdinalIgnoreCase);
+
+    // Shortcuts show without ".lnk"; other files (e.g. .bat) keep their full name so
+    // "x.bat" and "x.bat.bak" stay distinguishable.
+    private static string GetDisplayName(string path) =>
+        IsShortcut(path) ? Path.GetFileNameWithoutExtension(path) : Path.GetFileName(path);
+
+    // Windows launches every file in a Startup folder, so non-shortcut files (scripts,
+    // executables) are reported with the file itself as the command.
+    private static string ReadRawCommand(string path)
+    {
+        if (!IsShortcut(path))
+        {
+            return path.Contains(' ') ? $"\"{path}\"" : path;
+        }
+
+        var (targetPath, arguments) = ShellLinkService.ReadShortcut(path);
+        return BuildRawCommand(targetPath, arguments);
     }
 
     private static string BuildRawCommand(string targetPath, string arguments)

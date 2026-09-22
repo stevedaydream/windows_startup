@@ -33,3 +33,11 @@ cancelled (`OperationCanceledException`), passing that same cancelled token to
 leaving the live entry removed with no disabled-record fallback — exactly the data loss
 the rollback exists to prevent. `DisableAsync` still rethrows the original
 `OperationCanceledException` once the restore (run with a live token) succeeds.
+
+## DataGrid columns start collapsed to a few pixels
+
+`MainWindow.xaml` gave fixed widths to every column except `Notes` (`Width="*"`). When the
+window's initial width was smaller than the fixed columns' total (e.g. the window exceeded
+the screen), WPF's DataGrid shrank the non-star columns down to their minimum width to make
+room for the star column, and never grew them back. Fixed by giving `Notes` a fixed width
+too, so the grid scrolls horizontally instead of redistributing.

@@ -6,3 +6,6 @@
 .vs/
 *.user
 *.suo
+
+# dev.bat publish output
+publish/

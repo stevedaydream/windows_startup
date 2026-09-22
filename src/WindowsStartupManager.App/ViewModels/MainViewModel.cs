@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows.Data;
 using WindowsStartupManager.Core;
 using WindowsStartupManager.Core.Models;
@@ -34,7 +35,10 @@ public sealed class MainViewModel : ObservableObject
         RemoveCommand = new AsyncRelayCommand(_ => RemoveAsync(), _ => SelectedEntry is not null);
         OpenSourceLocationCommand = new RelayCommand(_ => OpenSourceLocation(), _ => SelectedEntry is not null);
         OpenResolvedLocationCommand = new RelayCommand(_ => OpenResolvedLocation(), _ => SelectedEntry is not null);
+        RestartAsAdministratorCommand = new RelayCommand(_ => RestartAsAdministrator(), _ => !IsElevated);
     }
+
+    public bool IsElevated { get; } = ElevationHelper.IsElevated();
 
     public ObservableCollection<StartupEntryViewModel> Entries { get; }
     public ICollectionView EntriesView { get; }
@@ -69,6 +73,7 @@ public sealed class MainViewModel : ObservableObject
     public AsyncRelayCommand RemoveCommand { get; }
     public RelayCommand OpenSourceLocationCommand { get; }
     public RelayCommand OpenResolvedLocationCommand { get; }
+    public RelayCommand RestartAsAdministratorCommand { get; }
 
     public async Task RefreshAsync()
     {
@@ -152,6 +157,20 @@ public sealed class MainViewModel : ObservableObject
         TryRun(() => _service.OpenResolvedLocation(SelectedEntry.Model), "Could not open the resolved file location.");
     }
 
+    private void RestartAsAdministrator()
+    {
+        try
+        {
+            ErrorMessage = null;
+            Process.Start(new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true, Verb = "runas" });
+            System.Windows.Application.Current.Shutdown();
+        }
+        catch (Win32Exception)
+        {
+            ErrorMessage = "Administrator restart was cancelled.";
+        }
+    }
+
     private void TryRun(Action action, string failureMessage)
     {
         try
@@ -179,7 +198,7 @@ public sealed class MainViewModel : ObservableObject
         }
         catch (ElevationRequiredException ex)
         {
-            ErrorMessage = $"{ex.Message} Restart the app as administrator to perform this action.";
+            ErrorMessage = $"{ex.Message} Click 'Restart as Administrator' to perform this action.";
         }
         catch (Exception ex)
         {

@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T12:51:37.881893+00:00",
+  "title": "Design System: Windows Startup Manager",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Windows action blue"
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Light ground"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "White working surface"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Deep ink"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted slate"
+      }
+    },
+    "typographyMeta": {
+      "command": {
+        "displayName": "Command",
+        "purpose": "Selectable technical command text in the details pane."
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Portable visual approximation of the WPF button; native access-key behavior remains in WPF.",
+      "html": "<button class=\"ds-button\">Refresh</button>",
+      "css": ".ds-button {font-family:\"Segoe UI\",sans-serif;font-size:14px;min-height:36px;padding:8px 14px;border:1px solid #DCE3ED;border-radius:5px;background:white;color:#18283E;cursor:pointer}.ds-button:hover {border-color:#185ABD}.ds-button:focus-visible {outline:none;border:2px solid #185ABD}.ds-button:active {opacity:.75}.ds-button:disabled {opacity:.45;cursor:default}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Portable visual approximation of the WPF button; native access-key behavior remains in WPF.",
+      "html": "<button class=\"ds-button\">Add entry</button>",
+      "css": ".ds-button {font-family:\"Segoe UI\",sans-serif;font-size:14px;min-height:36px;padding:8px 14px;border:1px solid #DCE3ED;border-radius:5px;background:white;color:#18283E;cursor:pointer}.ds-button:hover {border-color:#185ABD}.ds-button:focus-visible {outline:none;border:2px solid #185ABD}.ds-button:active {opacity:.75}.ds-button:disabled {opacity:.45;cursor:default}.ds-button {background:#185ABD;color:white;border-color:#185ABD}"
+    },
+    {
+      "name": "Removal Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Portable visual approximation of the WPF button; native access-key behavior remains in WPF.",
+      "html": "<button class=\"ds-button\">Remove entry…</button>",
+      "css": ".ds-button {font-family:\"Segoe UI\",sans-serif;font-size:14px;min-height:36px;padding:8px 14px;border:1px solid #DCE3ED;border-radius:5px;background:white;color:#18283E;cursor:pointer}.ds-button:hover {border-color:#185ABD}.ds-button:focus-visible {outline:none;border:2px solid #185ABD}.ds-button:active {opacity:.75}.ds-button:disabled {opacity:.45;cursor:default}.ds-button {color:#A12732}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "text-field",
+      "description": "Approximation of the text-field padding and border. Focus treatment remains platform-owned in the application.",
+      "html": "<input class=\"ds-input\" aria-label=\"Entry name\" placeholder=\"Entry name\">",
+      "css": ".ds-input {font-family:\"Segoe UI\",sans-serif;font-size:14px;padding:8px 10px;border:1px solid #DCE3ED;color:#18283E;background:white}.ds-input::selection {background:#BDD5F8}.ds-input:focus-visible {outline:auto}"
+    },
+    {
+      "name": "Enabled Status",
+      "kind": "chip",
+      "refersTo": "status-enabled",
+      "description": "Informational status badge; not an interactive control.",
+      "html": "<span class=\"ds-status\">Enabled</span>",
+      "css": ".ds-status {display:inline-block;font-family:\"Segoe UI\",sans-serif;font-size:12px;font-weight:600;padding:3px 8px;border-radius:4px;color:#176346;background:#E4F3ED}"
+    },
+    {
+      "name": "Disabled Status",
+      "kind": "chip",
+      "refersTo": "status-disabled",
+      "description": "Informational status badge; not an interactive control.",
+      "html": "<span class=\"ds-status\">Disabled</span>",
+      "css": ".ds-status {display:inline-block;font-family:\"Segoe UI\",sans-serif;font-size:12px;font-weight:600;padding:3px 8px;border-radius:4px;color:#526074;background:#EDF0F4}"
+    },
+    {
+      "name": "Details Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "White bordered details surface. Preview text is illustrative.",
+      "html": "<section class=\"ds-panel\">Select an entry</section>",
+      "css": ".ds-panel {font-family:\"Segoe UI\",sans-serif;font-size:20px;font-weight:600;color:#18283E;background:white;border:1px solid #DCE3ED;border-radius:7px;padding:22px}"
+    }
+  ],
+  "narrative": {
+    "overview": "This is a native Windows desktop utility built with WPF. The user-confirmed direction is a light Windows ground, a blue action accent, and clear information with intuitive operation. The visual system supports reading startup entries and acting on a selected entry through familiar desktop controls.\n\nThe implemented main surface places a startup list on the left and a fixed details pane on the right. This document records implemented XAML decisions; it does not establish an additional brand metaphor. Measurements expressed as px in the portable tokens correspond to WPF device-independent units, not physical screen pixels.",
+    "keyCharacteristics": [
+      "Light ground and white working surfaces.",
+      "Segoe UI hierarchy with restrained blue actions.",
+      "Textual status labels and copyable technical details.",
+      "Flat bordered panels and persistent entry controls."
+    ],
+    "rules": [],
+    "dos": [
+      "Do reuse the implemented resource colors and Segoe UI hierarchy.",
+      "Do keep startup status in words alongside its badge color.",
+      "Do preserve keyboard focus borders, access keys, and selectable technical values.",
+      "Do keep the details actions reachable beneath scrolling metadata."
+    ],
+    "donts": [
+      "Don't substitute web, iOS, or Android conventions for the native Windows context.",
+      "Don't introduce shadows or ornamental surface effects into these flat working panels without revisiting the design direction.",
+      "Don't claim responsive stacking or compact-window visual verification from source sizing alone."
+    ]
+  }
+}

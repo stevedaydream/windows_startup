@@ -15,6 +15,8 @@ public sealed class MainViewModel : ObservableObject
     private string? _statusMessage;
     private string? _errorMessage;
     private StartupEntryViewModel? _selectedEntry;
+    private string _searchText = string.Empty;
+    private int _statusFilterIndex;
 
     public MainViewModel(StartupManagerService service)
     {
@@ -22,6 +24,8 @@ public sealed class MainViewModel : ObservableObject
         Entries = new ObservableCollection<StartupEntryViewModel>();
         EntriesView = CollectionViewSource.GetDefaultView(Entries);
         EntriesView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(StartupEntryViewModel.SourceDisplayName)));
+        EntriesView.Filter = MatchesFilter;
+        Entries.CollectionChanged += (_, _) => UpdateViewSummary();
 
         RefreshCommand = new AsyncRelayCommand(_ => RefreshAsync());
         AddEntryCommand = new AsyncRelayCommand(async parameter =>
@@ -46,7 +50,50 @@ public sealed class MainViewModel : ObservableObject
     public StartupEntryViewModel? SelectedEntry
     {
         get => _selectedEntry;
-        set => SetProperty(ref _selectedEntry, value);
+        set
+        {
+            if (SetProperty(ref _selectedEntry, value))
+            {
+                OnPropertyChanged(nameof(ToggleActionText));
+                System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+            }
+        }
+    }
+
+    public string ToggleActionText => SelectedEntry?.IsEnabled == true ? "Disable entry" : "Enable entry";
+    public string SearchText
+    {
+        get => _searchText;
+        set { if (SetProperty(ref _searchText, value)) ApplyFilter(); }
+    }
+    public int StatusFilterIndex
+    {
+        get => _statusFilterIndex;
+        set { if (SetProperty(ref _statusFilterIndex, value)) ApplyFilter(); }
+    }
+    public bool IsViewEmpty => EntriesView.IsEmpty;
+    public string EntrySummary => $"{EntriesView.Cast<object>().Count()} of {Entries.Count} entries";
+
+    private bool MatchesFilter(object item)
+    {
+        if (item is not StartupEntryViewModel entry) return false;
+        if (StatusFilterIndex == 1 && !entry.IsEnabled || StatusFilterIndex == 2 && entry.IsEnabled) return false;
+        var query = SearchText.Trim();
+        return query.Length == 0 || new[] { entry.Name, entry.Publisher, entry.RawCommand, entry.ApplicationName }
+            .Any(value => value.Contains(query, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void ApplyFilter()
+    {
+        EntriesView.Refresh();
+        if (SelectedEntry is not null && !EntriesView.Contains(SelectedEntry)) SelectedEntry = null;
+        UpdateViewSummary();
+    }
+
+    private void UpdateViewSummary()
+    {
+        OnPropertyChanged(nameof(EntrySummary));
+        OnPropertyChanged(nameof(IsViewEmpty));
     }
 
     public bool IsBusy
@@ -77,6 +124,7 @@ public sealed class MainViewModel : ObservableObject
 
     public async Task RefreshAsync()
     {
+        var selectedKey = SelectedEntry?.Model.Key;
         await RunBusyAsync(async () =>
         {
             var entries = await _service.GetAllEntriesAsync().ConfigureAwait(true);
@@ -85,6 +133,8 @@ public sealed class MainViewModel : ObservableObject
             {
                 Entries.Add(new StartupEntryViewModel(entry));
             }
+            SelectedEntry = Entries.FirstOrDefault(entry => entry.Model.Key.Equals(selectedKey) && MatchesFilter(entry));
+            UpdateViewSummary();
             StatusMessage = $"Loaded {Entries.Count} startup entries.";
         }, "Could not load startup entries.").ConfigureAwait(true);
     }

@@ -9,3 +9,6 @@
 
 # dev.bat publish output
 publish/
+
+# Local UI verification captures
+.impeccable/review/
